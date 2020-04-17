@@ -1,5 +1,6 @@
 from .utils import *
 from .ResultsObject import ResultsObject
+import re
 
 
 class Profile(ResultsObject):
@@ -11,20 +12,57 @@ class Profile(ResultsObject):
     @property
     def personal_info(self):
         """Return dict of personal info about the user"""
-        top_card = one_or_default(self.soup, 'section.pv-top-card-section')
+        top_card = one_or_default(self.soup, '.pv-top-card-v3')
+        contact_info = one_or_default(self.soup, '.pv-contact-info')
 
+        # Note that some of these selectors may have multiple selections, but
+        # get_info takes the first match
         personal_info = get_info(top_card, {
-            'name': '.pv-top-card-section__name',
-            'headline': '.pv-top-card-section__headline',
-            'company': '.pv-top-card-v2-section__company-name',
-            'school': '.pv-top-card-v2-section__school-name',
-            'location': '.pv-top-card-section__location',
-            'summary': 'p.pv-top-card-section__summary-text'
+            'name': '.pv-top-card-v3--list > li',
+            'headline': '.flex-1.mr5 h2',
+            'company': 'li[data-control-name="position_see_more"]',
+            'school': 'li[data-control-name="education_see_more"]',
+            'location': '.pv-top-card-v3--list-bullet > li',
         })
+
+        personal_info['summary'] = text_or_default(
+            self.soup, '.pv-about-section .pv-about__summary-text', '').replace('... see more', '').strip()
+
+        image_url = ''
+        # If this is not None, you were scraping your own profile.
+        image_element = one_or_default(
+            top_card, 'img.profile-photo-edit__preview')
+
+        if not image_element:
+            image_element = one_or_default(
+                top_card, 'img.pv-top-card-section__photo')
+
+        # Set image url to the src of the image html tag, if it exists
+        try:
+            image_url = image_element['src']
+        except:
+            pass
+
+        personal_info['image'] = image_url
+
         followers_text = text_or_default(self.soup,
-                                         '.pv-recent-activity-section__follower-count-text', '')
+                                         '.pv-recent-activity-section__follower-count', '')
         personal_info['followers'] = followers_text.replace(
             'followers', '').strip()
+
+        # print(contact_info)
+        personal_info.update(get_info(contact_info, {
+            'email': '.ci-email .pv-contact-info__ci-container',
+            'phone': '.ci-phone .pv-contact-info__ci-container',
+            'connected': '.ci-connected .pv-contact-info__ci-container'
+        }))
+
+        personal_info['websites'] = []
+        if contact_info:
+            websites = contact_info.select('.ci-websites li a')
+            websites = list(map(lambda x: x['href'], websites))
+            personal_info['websites'] = websites
+
         return personal_info
 
     @property
@@ -42,6 +80,8 @@ class Profile(ResultsObject):
         jobs = all_or_default(
             container, '#experience-section ul .pv-position-entity')
         jobs = list(map(get_job_info, jobs))
+        jobs = flatten_list(jobs)
+
         experiences['jobs'] = jobs
 
         schools = all_or_default(
@@ -109,3 +149,13 @@ class Profile(ResultsObject):
         interests = map(lambda i: text_or_default(
             i, '.pv-entity__summary-title'), interests)
         return list(interests)
+
+    def to_dict(self):
+        info = super(Profile, self).to_dict()
+        info['personal_info']['current_company_link'] = ''
+        jobs = info['experiences']['jobs']
+        if jobs and jobs[0]['date_range'] and 'present' in jobs[0]['date_range'].lower():
+            info['personal_info']['current_company_link'] = jobs[0]['li_company_url']
+        else:
+            print("Unable to determine current company...continuing")
+        return info

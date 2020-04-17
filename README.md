@@ -13,26 +13,27 @@ unauthenticated or unusual requests
 
 <!--ts-->
 
--   [scrape_linkedin](#scrape_linkedin)
-    -   [Introduction](#introduction)
-    -   [Table of Contents](#table-of-contents)
-    -   [Installation](#installation)
-        -   [Install with pip](#install-with-pip)
-        -   [Install from source](#install-from-source)
-        -   [Tests](#tests)
-    -   [Getting &amp; Setting LI_AT](#getting--setting-li_at)
-        -   [Getting LI_AT](#getting-li_at)
-        -   [Setting LI_AT](#setting-li_at)
-    -   [Usage](#usage)
-        -   [Command Line](#command-line)
-        -   [Python Package](#python-package)
-            -   [Profiles](#profiles)
-            -   [Companies](#companies)
-            -   [Config](#config)
-    -   [Scraping in Parallel](#scraping-in-parallel)
-        -   [Example](#example)
-        -   [Configuration](#configuration)
-    -   [Issues](#issues)
+- [scrape_linkedin](#scrapelinkedin)
+  - [Introduction](#introduction)
+  - [Table of Contents](#table-of-contents)
+  - [Installation](#installation)
+    - [Install with pip](#install-with-pip)
+    - [Install from source](#install-from-source)
+    - [Tests](#tests)
+  - [Getting & Setting LI_AT](#getting--setting-liat)
+    - [Getting LI_AT](#getting-liat)
+    - [Setting LI_AT](#setting-liat)
+  - [Examples](#examples)
+  - [Usage](#usage)
+    - [Command Line](#command-line)
+    - [Python Package](#python-package)
+      - [Profiles](#profiles)
+      - [Companies](#companies)
+      - [config](#config)
+  - [Scraping in Parallel](#scraping-in-parallel)
+    - [Example](#example)
+    - [Configuration](#configuration)
+  - [Issues](#issues)
 
 <!-- Added by: austinoboyle, at: 2018-05-06T20:13-04:00 -->
 
@@ -78,12 +79,16 @@ There are two ways to set your li_at cookie:
 
 1.  Set the LI_AT environment variable
     -   `$ export LI_AT=YOUR_LI_AT_VALUE`
-    -   **On Windows**: `$ set LI_AT=YOUR_LI_AT_VALUE
+    -   **On Windows**: `\$ set LI_AT=YOUR_LI_AT_VALUE
 2.  Pass the cookie as a parameter to the Scraper object.
     > `>>> with ProfileScraper(cookie='YOUR_LI_AT_VALUE') as scraper:`
 
 A cookie value passed directly to the Scraper **will override your
 environment variable** if both are set.
+
+## Examples
+
+See [`/examples`](https://github.com/austinoboyle/scrape-linkedin-selenium/tree/master/examples)
 
 ## Usage
 
@@ -148,6 +153,12 @@ a profile. Also has a to_dict() method that returns all of the data as a dict
     -   headline
     -   followers
     -   summary
+    -   websites
+    -   email
+    -   phone
+    -   connected
+    -   current_company_link
+    -   image
 -   skills
 -   experiences
     -   volunteering
@@ -193,14 +204,16 @@ a company profile. There will be three properties: overview, jobs, and life.
 
 -   overview
     -   name
-    -   industry
-    -   description
-    -   location
-    -   website
-    -   year_founded
-    -   company_type
     -   company_size
+    -   specialties
+    -   headquarters
+    -   founded
+    -   website
+    -   description
+    -   industry
     -   num_employees
+    -   type
+    -   image
 -   jobs **NOT YET IMPLEMENTED**
 -   life **NOT YET IMPLEMENTED**
 

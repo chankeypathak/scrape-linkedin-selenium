@@ -2,10 +2,15 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.expected_conditions import _find_element
 
 import math
+import re
 
 options = Options()
 options.add_argument('--headless')
 HEADLESS_OPTIONS = {'chrome_options': options}
+
+
+def flatten_list(l):
+    return [item for sublist in l for item in sublist]
 
 
 def split_lists(lst, num):
@@ -45,7 +50,7 @@ def one_or_default(element, selector, default=None):
         - selector {str}: css selector to search for
         - default {any}: default return value
 
-    Returns: 
+    Returns:
         beautifulsoup element if match is found, otherwise return the default
     """
     try:
@@ -74,7 +79,7 @@ def all_or_default(element, selector, default=[]):
         - selector: str css selector to search for
         - default: default value if there is an error or no elements found
 
-    Returns: 
+    Returns:
         {list}: list of all matching elements if any are found, otherwise return
         the default value
     """
@@ -106,21 +111,65 @@ def get_info(element, mapping, default=None):
 
 def get_job_info(job):
     """
-    Returns: 
+    Returns:
         dict of job's title, company, date_range, location, description
     """
-    return get_info(job, {
-        'title': '.pv-entity__summary-info h3:nth-of-type(1)',
-        'company': '.pv-entity__secondary-title',
-        'date_range': '.pv-entity__date-range span:nth-of-type(2)',
-        'location': '.pv-entity__location span:nth-of-type(2)',
-        'description': '.pv-entity__description'
-    })
+    position_elements = all_or_default(
+        job, '.pv-entity__role-details-container')
+
+    # Handle UI case where user has muttiple consec roles at same company
+    if (position_elements):
+        company = text_or_default(job,
+                                  '.pv-entity__company-summary-info > h3 > span:nth-of-type(2)')
+
+        company_href = one_or_default(
+            job, 'a[data-control-name="background_details_company"]')['href']
+        pattern = re.compile('^/company/.*?/$')
+        if pattern.match(company_href):
+            li_company_url = 'https://www.linkedin.com/' + company_href
+        else:
+            li_company_url = ''
+        positions = list(map(lambda pos: get_info(pos, {
+            'title': '.pv-entity__summary-info-v2 > h3 > span:nth-of-type(2)',
+            'date_range': '.pv-entity__date-range span:nth-of-type(2)',
+            'location': '.pv-entity__location > span:nth-of-type(2)',
+            'description': '.pv-entity__description'
+        }), position_elements))
+        for pos in positions:
+            pos['company'] = company
+            pos['li_company_url'] = li_company_url
+            if pos['description'] is not None:
+                pos['description'] = pos['description'].replace(
+                    'See less\n', '').replace('... See more', '').strip()
+
+        return positions
+
+    else:
+        job_info = get_info(job, {
+            'title': '.pv-entity__summary-info h3:nth-of-type(1)',
+            'company': '.pv-entity__secondary-title',
+            'date_range': '.pv-entity__date-range span:nth-of-type(2)',
+            'location': '.pv-entity__location span:nth-of-type(2)',
+            'description': '.pv-entity__description',
+        })
+        if job_info['description'] is not None:
+            job_info['description'] = job_info['description'].replace(
+                'See less\n', '').replace('... See more', '').strip()
+
+        company_href = one_or_default(
+            job, 'a[data-control-name="background_details_company"]')['href']
+        pattern = re.compile('^/company/.*?/$')
+        if pattern.match(company_href):
+            job_info['li_company_url'] = 'https://www.linkedin.com' + company_href
+        else:
+            job_info['li_company_url'] = ''
+
+        return [job_info]
 
 
 def get_school_info(school):
     """
-    Returns: 
+    Returns:
         dict of school name, degree, grades, field_of_study, date_range, &
         extra-curricular activities
     """
@@ -136,7 +185,7 @@ def get_school_info(school):
 
 def get_volunteer_info(exp):
     """
-    Returns: 
+    Returns:
         dict of title, company, date_range, location, cause, & description
     """
     return get_info(exp, {
